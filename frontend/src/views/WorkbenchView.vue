@@ -60,6 +60,24 @@
             >
               {{ action }}
             </button>
+            <button
+              v-if="meta.key === 'pending_segment'"
+              class="link"
+              type="button"
+              :data-testid="`detail-${row.id}`"
+              @click="showSettlementDetail(row)"
+            >
+              结算明细
+            </button>
+            <button
+              v-if="meta.key === 'feed_scheduler'"
+              class="link"
+              type="button"
+              :data-testid="`rounds-${row.id}`"
+              @click="showRoundSummary(row)"
+            >
+              轮次核对
+            </button>
           </td>
         </tr>
         <tr v-if="!rows.length">
@@ -86,6 +104,59 @@
       </form>
     </div>
 
+    <div v-if="settlementDetail" class="modal-backdrop" data-testid="settlement-detail">
+      <div class="modal">
+        <h3>结算明细</h3>
+        <dl class="detail-list">
+          <template v-for="item in detailItems" :key="item.label">
+            <dt>{{ item.label }}</dt>
+            <dd>{{ item.value }}</dd>
+          </template>
+        </dl>
+        <div class="page-actions">
+          <button class="btn" type="button" @click="settlementDetail = null">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="roundSummary" class="modal-backdrop" data-testid="round-summary">
+      <div class="modal">
+        <h3>轮次核对 · {{ roundSummary.task_name }}</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>轮次</th>
+              <th>状态</th>
+              <th>派发页面</th>
+              <th>回执页面</th>
+              <th>完成页面</th>
+              <th>完成分块</th>
+              <th>待结算分块</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in roundSummary.rounds" :key="item.round">
+              <td>第 {{ item.round }} 轮</td>
+              <td>{{ item.status }}</td>
+              <td>{{ item.派发页面数 }}</td>
+              <td>{{ item.回执页面数 }}</td>
+              <td>{{ item.完成页面数 }}</td>
+              <td>{{ item.完成分块数 }}</td>
+              <td>{{ item.待结算分块数 }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="status-legend">
+          已结算页面 {{ roundSummary.totals.settled_pages }} 个、文本块
+          {{ roundSummary.totals.settled_blocks }} 个；待结算
+          {{ roundSummary.totals.unsettled_blocks }} 个。
+        </p>
+        <div class="page-actions">
+          <button class="btn" type="button" @click="roundSummary = null">关闭</button>
+        </div>
+      </div>
+    </div>
+
     <footer class="page-foot">
       <span>共 {{ total }} 条{{ meta.name }}记录</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
@@ -100,8 +171,11 @@ import {
   createEntry,
   downloadEntries,
   listEntries,
+  loadRoundSummary,
+  loadSettlementDetail,
   moduleMeta,
   runAction as applyAction,
+  type RoundSummary,
 } from '@/api/backend-service'
 import type { EntryRow } from '@/data/types'
 
@@ -148,6 +222,45 @@ function openCreate() {
   createValues.value = Object.fromEntries(meta.fields.map((field) => [field, '']))
   errorMessage.value = ''
   showCreate.value = true
+}
+
+const settlementDetail = ref<Record<string, unknown> | null>(null)
+const roundSummary = ref<RoundSummary | null>(null)
+const detailLabels: Record<string, string> = {
+  settlement_no: '结算单号',
+  task_name: '关联任务',
+  page_uri: '来源页面',
+  block_id: '分块ID',
+  settlement_status: '结算状态',
+  verification: '验证结果',
+  dispatch_round: '派发轮次',
+  receipt_round: '回执轮次',
+  completion_round: '完成轮次',
+  same_round_pause_conflict: '暂停同轮冲突',
+  explanation: '完成轮次说明',
+}
+const detailItems = computed(() =>
+  Object.entries(settlementDetail.value ?? {})
+    .filter(([key]) => key in detailLabels)
+    .map(([key, value]) => ({ label: detailLabels[key], value: String(value ?? '—') })),
+)
+
+async function showSettlementDetail(row: EntryRow) {
+  errorMessage.value = ''
+  try {
+    settlementDetail.value = await loadSettlementDetail(Number(row.id))
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '结算明细读取失败'
+  }
+}
+
+async function showRoundSummary(row: EntryRow) {
+  errorMessage.value = ''
+  try {
+    roundSummary.value = await loadRoundSummary(Number(row.id))
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '轮次核对读取失败'
+  }
 }
 
 async function submitCreate() {

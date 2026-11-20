@@ -11,6 +11,7 @@ from app.services.text_segment import TextSegmentService
 from app.services.sentiment_tag import SentimentTagService
 from app.services.schema_align import SchemaAlignService
 from app.services.feed_scheduler import FeedSchedulerService
+from app.services.pending_segment import PendingSegmentService
 from app.services.quality_check import QualityCheckService
 from app.services.probe_selector import ProbeSelectorService
 from app.services.page_snapshot import PageSnapshotService
@@ -31,6 +32,7 @@ SERVICES: dict[str, BaseModuleService] = {
     "sentiment_tag": SentimentTagService(),
     "schema_align": SchemaAlignService(),
     "feed_scheduler": FeedSchedulerService(),
+    "pending_segment": PendingSegmentService(),
     "quality_check": QualityCheckService(),
     "probe_selector": ProbeSelectorService(),
     "page_snapshot": PageSnapshotService(),

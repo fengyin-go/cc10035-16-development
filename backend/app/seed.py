@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 SEED_ROWS: dict[str, list[dict[str, Any]]] = {
+    "pending_segment": [],
     "dom_parser": [{'id': 1,
   'status': '草稿',
   'pending': True,
@@ -300,7 +301,18 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '爬取频率': '种子调度样例3',
   '最大页面数': '种子调度样例3',
   '域名限制': '种子调度样例3',
-  '优先级': '种子调度样例3'}],
+  '优先级': '种子调度样例3'},
+ {'id': 4,
+  'status': '待调度',
+  'pending': True,
+  'abnormal': False,
+  '任务名称': '示例站点栏目采集',
+  'URL种子': 'https://example.com/news',
+  '抓取深度': '2',
+  '爬取频率': '10/分钟',
+  '最大页面数': '4',
+  '域名限制': 'example.com',
+  '优先级': '高'}],
     "quality_check": [{'id': 1,
   'status': '草稿',
   'pending': True,

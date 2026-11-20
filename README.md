@@ -59,6 +59,7 @@ npm run dev
 | 情感标注 | `sentiment_tag` | 情感记录 | 记录ID、文本片段、情感倾向 |
 | Schema对齐 | `schema_align` | 对齐规则 | 规则名称、源Schema、目标Schema |
 | 种子调度 | `feed_scheduler` | 调度任务 | 任务名称、URL种子、抓取深度 |
+| 待结算页面分块 | `pending_segment` | 待结算分块 | 结算单号、关联任务、页面URI、分块ID、派发/回执/完成轮次 |
 | 质量检查 | `quality_check` | 检查规则 | 规则名称、检查字段、检查类型 |
 | 探针选择 | `probe_selector` | 探针配置 | 探针名称、目标页面、选择器列表 |
 | 页面快照 | `page_snapshot` | 快照记录 | 快照ID、页面URI、DOM哈希 |
@@ -76,6 +77,26 @@ npm run dev
   `frontend/src/domain/<模块>.ts`，用于承载真实业务差异并维持36题位容量。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+
+## 种子调度的暂停结算
+
+种子调度按「轮次」推进，暂停只停止派发，不丢弃在途回执：
+
+1. `POST /api/feed_scheduler/{id}/start` 开始一轮调度，派发页面并写派发记录；
+2. `POST /api/feed_scheduler/{id}/receipts` 页面完成回执 + 验证结果，
+   文本分块切块后同步到「待结算页面分块」数据集；
+3. `POST /api/feed_scheduler/{id}/pause` 记录暂停边界序号，之后不再派发新页面；
+4. `POST /api/feed_scheduler/{id}/resume` 结束暂停轮、开恢复轮，先把在途回执结算掉，
+   再派发此前没派过的页面；
+5. `GET /api/feed_scheduler/{id}/rounds` 按轮次核对派发/回执/完成页面与文本块数量；
+6. `GET /api/pending_segment/{id}/detail` 给出该页的派发轮次、回执轮次和完成轮次说明。
+
+同一轮里暂停申请与分块回执同时到达时，以暂停边界序号为准：回执晚于边界就不计入
+当轮，恢复后在第 N 轮结算，明细里写明「该页在第 N 轮才算完成」。同一份派发记录
+只接受第一份回执，重复回执（含相同回执标识）直接拒绝，原有文本保持不变；
+验证未通过的文本块进「保留核对」，恢复后也不自动结算，需人工核对。
+
+回归测试：`backend/.venv/bin/python -m unittest discover -s backend/tests -v`。
 
 领域：数据工程
 子方向：数据采集、爬虫与RPA

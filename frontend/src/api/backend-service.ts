@@ -59,3 +59,36 @@ export async function loadOverview(): Promise<OverviewResult> {
   if (!response.ok) throw new Error('运营概览读取失败')
   return await response.json()
 }
+
+/** 待结算分块的结算明细：该页在哪一轮派发、哪一轮回执、哪一轮才算完成。 */
+export async function loadSettlementDetail(id: number): Promise<Record<string, unknown>> {
+  const response = await request(`/api/pending_segment/${id}/detail`)
+  if (!response.ok) throw new Error('结算明细读取失败')
+  return await response.json()
+}
+
+export type RoundSummary = {
+  ok: boolean
+  task_id: number
+  task_name?: string
+  task_status?: string
+  current_round?: number | null
+  rounds: {
+    round: number
+    status: string
+    派发页面数: number
+    回执页面数: number
+    完成页面数: number
+    完成分块数: number
+    待结算页面数: number
+    待结算分块数: number
+  }[]
+  totals: Record<string, number>
+}
+
+/** 按轮次核对页面与文本块数量。 */
+export async function loadRoundSummary(taskId: number): Promise<RoundSummary> {
+  const response = await request(`/api/feed_scheduler/${taskId}/rounds`)
+  if (!response.ok) throw new Error('轮次核对读取失败')
+  return await response.json()
+}
